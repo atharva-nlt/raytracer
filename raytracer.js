@@ -23,6 +23,22 @@ const scene = {
       radius: 1,
       color: {r: 0, g: 255, b: 0},
     }
+  ],
+  lights: [
+    {
+      type: "ambient",
+      intensity: 0.15,
+    },
+    {
+      type: "point",
+      intensity: 0.65,
+      point: {x: 2.5,y: 1,z: 0},
+    },
+    {
+      type: "directional",
+      intensity: 0.2,
+      direction: {x: 1,y: 4,z: 4},
+    }
   ]
 }
 
@@ -65,8 +81,28 @@ function traceRay(O, D, t_min, t_max) {
   if(closest_sphere == null) {
     return {r: 0, g: 0, b: 0 };
   } else {
-    return closest_sphere.color;
+    let P = addVec(O, mulScalar(D, t_closest));
+    let N = subVec(P, closest_sphere.center);
+    N = normalize(N);
+    return mulColor(closest_sphere.color, computeLighting(P, N));
   }
+}
+
+function mulColor(color, i) {
+  return {r: color.r*i, g: color.g*i, b: color.b*i};
+  
+}
+
+function mulScalar(A, k) {
+  return {x: A.x * k, y: A.y * k, z: A.z * k};
+}
+
+function addVec(A, B) {
+  return {x: A.x + B.x, y: A.y + B.y, z: A.z + B.z};
+}
+
+function subVec(A, B) {
+  return {x: A.x - B.x, y: A.y - B.y, z: A.z - B.z};
 }
 
 function rayIntersection(D, C, r) {
@@ -85,6 +121,45 @@ function rayIntersection(D, C, r) {
   else {
     return null;
   }
+}
+
+function computeLighting(P, N) {
+  let intensity = 0.0 ;
+  let L = {} ;
+  for (let light of scene.lights) {
+    if(light.type == "ambient") {
+      intensity += light.intensity ;
+      continue;
+    }
+    else if(light.type == "point") {
+      const point = light.point ;
+      L = {x: point.x - P.x, y: point.y - P.y, z: point.z - P.z};
+    }
+    else if(light.type == "directional") {
+      L = light.direction ;
+    }
+    L = normalize(L);
+    let n_dot_l = dot(L, N) ;
+    if(n_dot_l > 0) {
+      intensity += light.intensity * n_dot_l ;
+    }
+  }
+  console.log(intensity * 1.33);
+  return intensity * 1.33;
+  // return 1.0;
+}
+
+function normalize(N) {
+  let mag = magnitude(N);
+  return {x: N.x/mag, y: N.y/mag, z: N.z/mag};
+}
+
+function magnitude (N) {
+  return Math.sqrt(dot(N, N));
+}
+
+function dot(N, M) {
+  return N.x * M.x + N.y * M.y + N.z * M.z ;
 }
 
 function putPixel(x, y, {r, g, b, a=255}) {
