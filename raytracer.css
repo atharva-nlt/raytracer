@@ -1,0 +1,12 @@
+#myCanvas {
+  border: 2px solid #000;
+  width: 500px;
+  height: 500px;
+  margin-top: 20px;
+}
+
+#container {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+}
