@@ -12,7 +12,7 @@ const scene = {
       center: {x:0, y:-1, z:3},
       radius: 1,
       color: {r: 255, g: 0, b: 0},
-      specular: 500,
+      specular: 300,
     },
     {
       center: {x:2, y:0, z:4},
@@ -24,7 +24,7 @@ const scene = {
       center: {x:-2, y:0, z:4},
       radius: 1,
       color: {r: 0, g: 255, b: 0},
-      specular: 10,
+      specular: 50,
     },
     {
       center: {x: 0, y: -5001, z:0},
@@ -94,7 +94,7 @@ function traceRay(O, D, t_min, t_max) {
     let P = addVec(O, mulScalar(D, t_closest));
     let N = subVec(P, closest_sphere.center);
     N = normalize(N);
-    return mulColor(closest_sphere.color, computeLighting(P, N));
+    return mulColor(closest_sphere.color, computeLighting(O, P, N, closest_sphere));
   }
 }
 
@@ -133,7 +133,7 @@ function rayIntersection(D, C, r) {
   }
 }
 
-function computeLighting(P, N) {
+function computeLighting(O, P, N, sphere) {
   let intensity = 0.0 ;
   let L = {} ;
   for (let light of scene.lights) {
@@ -148,14 +148,23 @@ function computeLighting(P, N) {
     else if(light.type == "directional") {
       L = light.direction ;
     }
+    let R = subVec(mulScalar(N, 2 * dot(N, L)), L);
+    let V = subVec(O, P);
     L = normalize(L);
+    R = normalize(R);
+    V = normalize(V);
     let n_dot_l = dot(L, N) ;
     if(n_dot_l > 0) {
       intensity += light.intensity * n_dot_l ;
     }
+    let r_dot_v = dot(R, V) ;
+    let r_dot_v_to_s = Math.pow(r_dot_v, sphere.specular) ;
+    if(r_dot_v > 0) {
+      intensity += light.intensity * r_dot_v_to_s ;
+    }
   }
-  console.log(intensity * 1.33);
-  return intensity * 1.33;
+  console.log(intensity);
+  return intensity ;
 }
 
 function normalize(N) {
