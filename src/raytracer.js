@@ -58,7 +58,7 @@ const d = 1 ;
 
 for (let y = canvas.height/2; y >= -canvas.height/2; y--) {
   for(let x = -canvas.width/2; x <= canvas.width/2; x++) {
-    let D = canvasToViewport(x, y) ;
+    let D = subVec(canvasToViewport(x, y), O) ;
     color = traceRay(O, D, 1, 10000);
     putPixel(x, y, color);
   }
@@ -71,10 +71,22 @@ function canvasToViewport(x, y) {
 }
 
 function traceRay(O, D, t_min, t_max) {
+  let {t_closest, closest_sphere} = closestIntersection(O, D, t_min, t_max) || {};
+  if(closest_sphere == null) {
+    return {r: 0, g: 0, b: 0 };
+  } else {
+    let P = addVec(O, mulScalar(D, t_closest));
+    let N = subVec(P, closest_sphere.center);
+    N = normalize(N);
+    return mulColor(closest_sphere.color, computeLighting(O, P, N, closest_sphere));
+  }
+}
+
+function closestIntersection(point, ray, t_min, t_max) {
   let t_closest = t_max;
-  let closest_sphere = null ;
+  let closest_sphere = null;
   for (let sphere of scene.spheres) {
-    const {t1, t2} = rayIntersection(D, sphere.center, sphere.radius) || {};
+    const {t1, t2} = rayIntersection(point, ray, sphere.center, sphere.radius) || {};
     if( t1 < t_max && t1 > t_min) {
       if (t1 < t_closest) {
         t_closest = t1 ;
@@ -88,14 +100,7 @@ function traceRay(O, D, t_min, t_max) {
       }
     }
   }
-  if(closest_sphere == null) {
-    return {r: 0, g: 0, b: 0 };
-  } else {
-    let P = addVec(O, mulScalar(D, t_closest));
-    let N = subVec(P, closest_sphere.center);
-    N = normalize(N);
-    return mulColor(closest_sphere.color, computeLighting(O, P, N, closest_sphere));
-  }
+  return {t_closest, closest_sphere};
 }
 
 function mulColor(color, i) {
@@ -115,11 +120,12 @@ function subVec(A, B) {
   return {x: A.x - B.x, y: A.y - B.y, z: A.z - B.z};
 }
 
-function rayIntersection(D, C, r) {
-  const DD = D.x * D.x + D.y * D.y + D.z * D.z;
-  const OC = C.x * C.x + C.y * C.y + C.z * C.z;
+function rayIntersection(O, D, C, r) {
+  const DD = dot(D, D);
+  let OC = subVec(C, O);
+  OC = dot(OC, OC);
   const a = DD ;
-  const b = -2 * (D.x * C.x + D.y * C.y + D.z * C.z);
+  const b = -2 * dot(subVec(C, O), D);
   const c = OC - r*r ;
   const delta = b*b - 4*a*c; 
   if (delta >= 0) {
@@ -136,6 +142,7 @@ function rayIntersection(D, C, r) {
 function computeLighting(O, P, N, sphere) {
   let intensity = 0.0 ;
   let L = {} ;
+  let max = null ;
   for (let light of scene.lights) {
     if(light.type == "ambient") {
       intensity += light.intensity ;
@@ -144,13 +151,21 @@ function computeLighting(O, P, N, sphere) {
     else if(light.type == "point") {
       const point = light.point ;
       L = {x: point.x - P.x, y: point.y - P.y, z: point.z - P.z};
+      max = magnitude(L);
     }
     else if(light.type == "directional") {
       L = light.direction ;
+      max = 1000;
     }
+
+    L = normalize(L);
+    let{closest_sphere} = closestIntersection(P, L, 0.0001, max) || {};
+    if(closest_sphere != null) {
+      continue;
+    }
+
     let R = subVec(mulScalar(N, 2 * dot(N, L)), L);
     let V = subVec(O, P);
-    L = normalize(L);
     R = normalize(R);
     V = normalize(V);
     let n_dot_l = dot(L, N) ;
@@ -169,6 +184,9 @@ function computeLighting(O, P, N, sphere) {
 
 function normalize(N) {
   let mag = magnitude(N);
+  if(mag === 0) {
+    return{x: 0, y: 0, z: 0};
+  }
   return {x: N.x/mag, y: N.y/mag, z: N.z/mag};
 }
 

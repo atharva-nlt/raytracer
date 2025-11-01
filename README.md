@@ -12,6 +12,7 @@ This is a simple project I made to when learning computer graphics this one expl
 - point, directional, ambient lights supported.
 - diffuse reflection supported
 - specular reflection supported
+- shadows
 
 ---
 
