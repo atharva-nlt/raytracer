@@ -13,6 +13,7 @@ This is a simple project I made to when learning computer graphics this one expl
 - diffuse reflection supported
 - specular reflection supported
 - shadows
+- reflective surfaces
 
 ---
 

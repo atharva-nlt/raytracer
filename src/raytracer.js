@@ -13,24 +13,28 @@ const scene = {
       radius: 1,
       color: {r: 255, g: 0, b: 0},
       specular: 300,
+      reflective: 0.08,
     },
     {
       center: {x:2, y:0, z:4},
       radius: 1,
       color: {r: 0, g: 0, b: 255},
       specular: 500,
+      reflective: 0.15,
     },
     {
       center: {x:-2, y:0, z:4},
       radius: 1,
       color: {r: 0, g: 255, b: 0},
       specular: 50,
+      reflective: 0.2
     },
     {
       center: {x: 0, y: -5001, z:0},
       radius: 5000,
       color: {r:255, g: 255, b:0},
       specular: 1000,
+      reflective: 0.25,
     }
 
   ],
@@ -59,7 +63,7 @@ const d = 1 ;
 for (let y = canvas.height/2; y >= -canvas.height/2; y--) {
   for(let x = -canvas.width/2; x <= canvas.width/2; x++) {
     let D = subVec(canvasToViewport(x, y), O) ;
-    color = traceRay(O, D, 1, 10000);
+    color = traceRay(O, D, 1, 10000, 3);
     putPixel(x, y, color);
   }
 };
@@ -70,15 +74,25 @@ function canvasToViewport(x, y) {
   return {x: x * viewport.width/canvas.width, y: y * viewport.height/canvas.height, z: d}
 }
 
-function traceRay(O, D, t_min, t_max) {
+function traceRay(O, D, t_min, t_max, recurse) {
   let {t_closest, closest_sphere} = closestIntersection(O, D, t_min, t_max) || {};
   if(closest_sphere == null) {
     return {r: 0, g: 0, b: 0 };
   } else {
+    r = closest_sphere.reflective ;
     let P = addVec(O, mulScalar(D, t_closest));
     let N = subVec(P, closest_sphere.center);
     N = normalize(N);
-    return mulColor(closest_sphere.color, computeLighting(O, P, N, closest_sphere));
+    let local_color =  mulColor(closest_sphere.color, computeLighting(O, P, N, closest_sphere));
+    if(recurse <= 0 || r <= 0) {
+      return local_color;
+    }
+    let incident = mulScalar(D, -1);
+    let reflected = reflectRay(incident, N) ;
+    let recurse_color = traceRay(P, reflected, 0.0001, 10000, recurse - 1);
+    let color = addColor(mulColor(local_color ,1 - r), mulColor(recurse_color, r)) ;
+    console.log(color) ;
+    return color;
   }
 }
 
@@ -103,9 +117,17 @@ function closestIntersection(point, ray, t_min, t_max) {
   return {t_closest, closest_sphere};
 }
 
+function reflectRay(R, N) {
+    return subVec(mulScalar(N, 2 * dot(N, R)), R);
+}
+
 function mulColor(color, i) {
   return {r: color.r*i, g: color.g*i, b: color.b*i};
   
+}
+
+function addColor(C1, C2) {
+  return {r: C1.r + C2.r, g: C1.g + C2.g, b: C1.b + C2.b};
 }
 
 function mulScalar(A, k) {
@@ -178,7 +200,6 @@ function computeLighting(O, P, N, sphere) {
       intensity += light.intensity * r_dot_v_to_s ;
     }
   }
-  console.log(intensity);
   return intensity ;
 }
 
